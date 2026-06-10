@@ -1,0 +1,67 @@
+# Fail2Ban Configuration - IG Edge One
+# Intrusion protection with automatic IP blocking
+
+[DEFAULT]
+# Ignore these IPs
+ignoreip = 127.0.0.1/8 ::1
+
+# Ban time in seconds (24 hours)
+bantime = 86400
+
+# Find time in seconds (10 minutes)
+findtime = 600
+
+# Maximum retries before ban
+maxretry = 5
+
+# Destination email
+destemail = root@localhost
+
+# Sender name
+sendername = Fail2Ban
+
+# Action - send email on ban
+action = %(action_mwl)s
+
+[sshd]
+# Enable SSH protection
+enabled = true
+port = ssh
+filter = sshd
+logpath = /var/log/auth.log
+backend = %(syslog_backend)s
+bantime = 86400
+findtime = 600
+maxretry = 5
+
+[recidive]
+# Recidive jail - higher ban time for repeat offenders
+enabled = true
+filter = recidive
+logpath = /var/log/fail2ban.log
+action = %(action_mwl)s
+bantime = 604800
+findtime = 86400
+maxretry = 3
+
+[portainer]
+# Portainer protection
+enabled = false
+port = 9443
+filter = portainer
+logpath = /var/log/portainer.log
+backend = %(syslog_backend)s
+bantime = 86400
+findtime = 600
+maxretry = 5
+
+[wg-easy]
+# WireGuard Easy protection
+enabled = false
+port = 51821
+filter = wg-easy
+logpath = /var/log/wg-easy.log
+backend = %(syslog_backend)s
+bantime = 86400
+findtime = 600
+maxretry = 5
