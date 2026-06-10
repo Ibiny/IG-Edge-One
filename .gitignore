@@ -1,0 +1,51 @@
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Docker
+docker/db/
+docker/data/
+*.log
+
+# Backups
+backup/*
+!backup/.gitkeep
+
+# System files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+
+# Logs
+/var/log/igedge/
+*.pid
+
+# Temporary files
+/tmp/
+/temp/
+
+# Sensitive data
+*.key
+*.pem
+*.pass
+
+# SSH keys
+.ssh/
+
+# Application data
+/opt/igedge/*
+!/opt/igedge/.gitkeep
+
+# Node modules (if any)
+node_modules/
+npm-debug.log
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
