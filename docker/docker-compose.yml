@@ -1,0 +1,175 @@
+version: '3.8'
+
+services:
+
+  # Unbound DNS with DNSSEC, Caching, Prefetch
+  unbound:
+    image: klud/unbound:latest
+    container_name: igedge-unbound
+    restart: unless-stopped
+    networks:
+      - igedge-network
+    ports:
+      - "53:53/tcp"
+      - "53:53/udp"
+    volumes:
+      - /opt/igedge/unbound:/opt/unbound/etc/unbound
+      - /opt/igedge/unbound/data:/opt/unbound/var
+    environment:
+      - TZ=America/Sao_Paulo
+      - DNSSEC=yes
+      - PREFETCH=yes
+      - MSG_CACHE_SIZE=64m
+      - RRSET_CACHE_SIZE=128m
+    healthcheck:
+      test: ["CMD", "dig", "@127.0.0.1", "google.com"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # LibreSpeed - Speed Testing on Port 80
+  librespeed:
+    image: linuxserver/librespeed:latest
+    container_name: igedge-librespeed
+    restart: unless-stopped
+    networks:
+      - igedge-network
+    ports:
+      - "80:80/tcp"
+    volumes:
+      - /opt/igedge/librespeed/config:/config
+      - /opt/igedge/librespeed/results:/config/www/results
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/Sao_Paulo
+      - MODE=standalone
+      - ENABLE_LOG=true
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Uptime Kuma - Monitoring & Status Pages
+  uptime-kuma:
+    image: louislam/uptime-kuma:latest
+    container_name: igedge-uptime-kuma
+    restart: unless-stopped
+    networks:
+      - igedge-network
+    ports:
+      - "3001:3001/tcp"
+    volumes:
+      - /opt/igedge/uptime-kuma:/app/data
+    environment:
+      - TZ=America/Sao_Paulo
+      - NODE_ENV=production
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # WireGuard Easy - VPN Management
+  wg-easy:
+    image: weejewel/wg-easy:latest
+    container_name: igedge-wg-easy
+    restart: unless-stopped
+    networks:
+      - igedge-network
+    ports:
+      - "51820:51820/udp"
+      - "51821:51821/tcp"
+    volumes:
+      - /opt/igedge/wg-easy:/etc/wireguard
+    environment:
+      - TZ=America/Sao_Paulo
+      - WG_HOST=${IPV4_ADDRESS}
+      - PASSWORD=${WG_ADMIN_PASSWORD}
+      - WG_DEFAULT_ADDRESS=10.0.0.x
+      - WG_DEFAULT_DNS=8.8.8.8, 8.8.4.4
+      - UI_TRAFFIC_STATS=true
+      - UI_CHART_TYPE=chartjs
+      - LANGUAGE=en
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    sysctls:
+      - net.ipv4.ip_forward=1
+      - net.ipv4.conf.all.forwarding=1
+      - net.ipv6.conf.all.forwarding=1
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:51821"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Portainer - Container Management
+  portainer:
+    image: portainer/portainer-ce:latest
+    container_name: igedge-portainer
+    restart: unless-stopped
+    networks:
+      - igedge-network
+    ports:
+      - "9443:9443/tcp"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /opt/igedge/portainer/data:/data
+    environment:
+      - TZ=America/Sao_Paulo
+    command:
+      - -H
+      - unix:///var/run/docker.sock
+      - --ssl
+      - --sslcert=/data/portainer.crt
+      - --sslkey=/data/portainer.key
+    healthcheck:
+      test: ["CMD", "curl", "-f", "-k", "https://localhost:9443"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  igedge-network:
+    name: igedge-network
+    driver: bridge
+    driver_opts:
+      com.docker.network.driver.mtu: 1450
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+          gateway: 172.20.0.1
+        - subnet: 2001:db8:1::/64
+          gateway: 2001:db8:1::1
